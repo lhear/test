@@ -80,11 +80,8 @@ jobs:
       - name: Prepare Final Structure
         run: |
           mkdir -p temp
-          echo 1
           unzip -o original.apk AndroidManifest.xml -d temp
-          echo 2
           touch -r temp/AndroidManifest.xml time_ref
-          echo 3
           rm -rf temp
           DEX_COUNT=$(zipinfo -1 original.apk | grep "classes.*\.dex" | wc -l)
           NEXT_IDX=$((DEX_COUNT + 1))
@@ -93,9 +90,13 @@ jobs:
           touch -r time_ref lib/arm64-v8a/libproxy.so
           touch -r time_ref "classes${NEXT_IDX}.dex"
           cp original.apk final.apk
+          echo 1
           zip -uX final.apk AndroidManifest.xml
+          echo 2
           zip -uX final.apk lib/arm64-v8a/libproxy.so
+          echo 3
           zip -ujmX final.apk "classes${NEXT_IDX}.dex"
+          echo 4
 
       - name: Zipalign
         run: |
