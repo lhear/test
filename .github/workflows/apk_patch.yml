@@ -64,7 +64,7 @@ jobs:
 
       - name: Inject Provider to Manifest
         run: |
-          PROVIDER_BLOCK="<provider ${{ env.NS_PREFIX }}:name=\"lck.qb.qipf.vkeszwc.LMTjkeQefuwPwtntzcs\" ${{ env.NS_PREFIX }}:permission=\"android.permission.MANAGE_DOCUMENTS\" ${{ env.NS_PREFIX }}:exported=\"true\" ${{ env.NS_PREFIX }}:authorities=\"${{ env.PKG_NAME }}.LMTjkeQefuwPwtntzcs\" ${{ env.NS_PREFIX }}:grantUriPermissions=\"true\"><intent-filter><action ${{ env.NS_PREFIX }}:name=\"android.content.action.DOCUMENTS_PROVIDER\" /></intent-filter></provider>"
+          PROVIDER_BLOCK="<provider ${{ env.NS_PREFIX }}:name=\"patch.FileProvider\" ${{ env.NS_PREFIX }}:permission=\"android.permission.MANAGE_DOCUMENTS\" ${{ env.NS_PREFIX }}:exported=\"true\" ${{ env.NS_PREFIX }}:authorities=\"${{ env.PKG_NAME }}.FileProvider\" ${{ env.NS_PREFIX }}:grantUriPermissions=\"true\"><intent-filter><action ${{ env.NS_PREFIX }}:name=\"android.content.action.DOCUMENTS_PROVIDER\" /></intent-filter></provider>"
           sed -i "/<\/application>/i $PROVIDER_BLOCK" decompiled_source/AndroidManifest.xml
 
       - name: Build Modified Manifest
@@ -77,13 +77,18 @@ jobs:
 
       - name: Prepare Final Structure
         run: |
-          cp original.apk final.apk
-          DEX_COUNT=$(zipinfo -1 final.apk | grep "classes.*\.dex" | wc -l)
+          unzip -p original.apk AndroidManifest.xml > time_ref
+          touch -r original.apk time_ref 
+          DEX_COUNT=$(zipinfo -1 original.apk | grep "classes.*\.dex" | wc -l)
           NEXT_IDX=$((DEX_COUNT + 1))
-          zip -u final.apk AndroidManifest.xml
-          zip -u final.apk lib/arm64-v8a/libproxy.so
           mv classes.dex "classes${NEXT_IDX}.dex"
-          zip -ujm final.apk "classes${NEXT_IDX}.dex"
+          touch -r time_ref AndroidManifest.xml
+          touch -r time_ref lib/arm64-v8a/libproxy.so
+          touch -r time_ref "classes${NEXT_IDX}.dex"
+          cp original.apk final.apk
+          zip -uX final.apk AndroidManifest.xml
+          zip -uX final.apk lib/arm64-v8a/libproxy.so
+          zip -ujmX final.apk "classes${NEXT_IDX}.dex"
 
       - name: Zipalign
         run: |
