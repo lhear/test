@@ -50,9 +50,7 @@ public class FileProvider extends DocumentsProvider {
 
     @Override
     public final void attachInfo(Context context, ProviderInfo providerInfo) {
-        if (providerInfo != null) {
-            this.b = providerInfo.authority;
-        }
+        this.b = context.getPackageName();
         this.c = new File(context.getFilesDir(), "proxy");
         if (!this.c.exists()) {
             this.c.mkdirs();
