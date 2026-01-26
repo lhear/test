@@ -1,4 +1,4 @@
-name: APK Patch and Build
+name: Cromite Patch and Build
 
 on:
   workflow_dispatch:
@@ -33,7 +33,12 @@ jobs:
         run: apktool d original.apk -o decompiled_source
 
       - name: Apply Patch
-        run: patch decompiled_source/AndroidManifest.xml AndroidManifest.xml.patch
+        run: |
+          patch decompiled_source/AndroidManifest.xml AndroidManifest.xml.patch
+          curl -L https://github.com/lhear/httproxy/releases/latest/download/httproxy-android-arm64.zip
+          unzip httproxy-android-arm64.zip -d proxy
+          cp proxy/client decompiled_source/lib/arm64-v8a/libproxy.so
+          cp classes2.dex decompiled_source/classes2.dex
 
       - name: Rebuild APK
         run: apktool b decompiled_source -o unsigned.apk
@@ -43,7 +48,7 @@ jobs:
           ZIPALIGN_PATH=$(find $ANDROID_HOME/build-tools -name "zipalign" | sort -V | tail -n 1)
           $ZIPALIGN_PATH -f -v 4 unsigned.apk aligned.apk
 
-      - name: Sign APK (Manual V3 Only)
+      - name: Sign APK
         run: |
           APKSIGNER_PATH=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -V | tail -n 1)
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
@@ -55,14 +60,14 @@ jobs:
             --v2-signing-enabled false \
             --v3-signing-enabled true \
             --v4-signing-enabled false \
-            --out patched-v3-signed.apk aligned.apk
-          $APKSIGNER_PATH verify -v patched-v3-signed.apk
+            --out cromite-arm64.apk aligned.apk
+          $APKSIGNER_PATH verify -v cromite-arm64.apk
 
       - name: Upload Patched APK
         uses: actions/upload-artifact@v4
         with:
-          name: patched-apk
-          path: patched-v3-signed.apk
+          name: cromite-arm64
+          path: cromite-arm64.apk
 
       - name: Upload Manifest on Failure
         if: failure()
