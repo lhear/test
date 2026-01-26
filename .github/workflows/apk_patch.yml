@@ -90,13 +90,9 @@ jobs:
           touch -r time_ref lib/arm64-v8a/libproxy.so
           touch -r time_ref "classes${NEXT_IDX}.dex"
           cp original.apk final.apk
-          echo 1
-          zip -uX final.apk AndroidManifest.xml
-          echo 2
-          zip -uX final.apk lib/arm64-v8a/libproxy.so
-          echo 3
-          zip -ujmX final.apk "classes${NEXT_IDX}.dex"
-          echo 4
+          zip -X final.apk AndroidManifest.xml
+          zip -X final.apk lib/arm64-v8a/libproxy.so
+          zip -jmX final.apk "classes${NEXT_IDX}.dex"
 
       - name: Zipalign
         run: |
