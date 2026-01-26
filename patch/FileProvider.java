@@ -18,7 +18,7 @@ import java.io.IOException;
 
 public class FileProvider extends DocumentsProvider {
     public static final String[] DEFAULT_ROOT_PROJECTION = new String[]{"root_id", "document_id", "summary", "flags", "title", "mime_types", "icon"};
-    public static final String[] DEFAULT_DOCUMENT_PROJECTION = new String[]{"document_id", "_display_name", "_size", "mime_type", "last_modified", "flags"};
+    public static final String[] DEFAULT_DOCUMENT_PROJECTION = new String[]{"document_id", "_display_name", "_size", "mime_type", "last_modified", "flags", "mt_extras"};
     
     public String b;
     public File c;
