@@ -10,83 +10,81 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Install Dependencies
+      - name: Download Tools and APK
         run: |
-          sudo apt-get update
-          sudo apt-get install -y patch
           mkdir -p bin
-          curl -L https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -o bin/apktool
-          curl -L https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.12.1.jar -o bin/apktool.jar
-          chmod +x bin/apktool bin/apktool.jar
-          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
-
-      - name: Download APK
-        run: curl -L https://github.com/uazo/cromite/releases/latest/download/arm64_ChromePublic.apk -o original.apk
-
-      - name: Decompile APK
-        run: apktool d -s original.apk -o decompiled_source
-
-      - name: Get Manifest Info
-        run: |
-          echo "PKG_NAME=$(grep -oP 'package="\K[^"]+' decompiled_source/AndroidManifest.xml)" >> $GITHUB_ENV
-          echo "NS_PREFIX=$(grep -oP '\K[a-zA-Z0-9]+(?=:name)' decompiled_source/AndroidManifest.xml | head -n 1)" >> $GITHUB_ENV
-
-      - name: Inject Provider to Manifest
-        run: |
-          PROVIDER_BLOCK="<provider ${{ env.NS_PREFIX }}:name=\"lck.qb.qipf.vkeszwc.LMTjkeQefuwPwtntzcs\" ${{ env.NS_PREFIX }}:permission=\"android.permission.MANAGE_DOCUMENTS\" ${{ env.NS_PREFIX }}:exported=\"true\" ${{ env.NS_PREFIX }}:authorities=\"${{ env.PKG_NAME }}.LMTjkeQefuwPwtntzcs\" ${{ env.NS_PREFIX }}:grantUriPermissions=\"true\"><intent-filter><action ${{ env.NS_PREFIX }}:name=\"android.content.action.DOCUMENTS_PROVIDER\" /></intent-filter></provider>"
-          sed -i "/<\/application>/i $PROVIDER_BLOCK" decompiled_source/AndroidManifest.xml
-
-      - name: Setup Proxy Lib
-        run: |
+          curl -L https://github.com/WindySha/ManifestEditor/releases/download/v2.0/ManifestEditor-2.0.jar -o bin/manifest-editor.jar
+          curl -L https://github.com/uazo/cromite/releases/latest/download/arm64_ChromePublic.apk -o original.apk
           curl -L https://github.com/lhear/httproxy/releases/latest/download/httproxy-android-arm64.zip -o proxy.zip
-          unzip -o proxy.zip -d proxy
-          mkdir -p decompiled_source/lib/arm64-v8a/
-          cp proxy/client decompiled_source/lib/arm64-v8a/libproxy.so
+          unzip -j proxy.zip client -d . && mv client libproxy.so
 
-      - name: Increment and Copy DEX
+      - name: Modify AndroidManifest.xml
         run: |
-          DEX_COUNT=$(find decompiled_source -maxdepth 1 -name "classes*.dex" | wc -l)
+          unzip original.apk AndroidManifest.xml -d .
+          AAPT2_PATH=$(find $ANDROID_HOME/build-tools -name "aapt2" | sort -V | tail -n 1)
+          PKG_NAME=$($AAPT2_PATH dump packagename original.apk)
+          echo "Detected Package: $PKG_NAME"
+          java -jar bin/manifest-editor.jar \
+            --input AndroidManifest.xml \
+            --output AndroidManifest_mod1.xml \
+            --add-tag "provider" \
+            --where "application" \
+            --attribute "name" "lck.qb.qipf.vkeszwc.LMTjkeQefuwPwtntzcs" \
+            --attribute "authorities" "$PKG_NAME.LMTjkeQefuwPwtntzcs" \
+            --attribute "exported" "true" \
+            --attribute "permission" "android.permission.MANAGE_DOCUMENTS" \
+            --attribute "grantUriPermissions" "true"
+          java -jar bin/manifest-editor.jar \
+            --input AndroidManifest_mod1.xml \
+            --output AndroidManifest_mod2.xml \
+            --add-tag "intent-filter" \
+            --where "provider[name='lck.qb.qipf.vkeszwc.LMTjkeQefuwPwtntzcs']"
+          java -jar bin/manifest-editor.jar \
+            --input AndroidManifest_mod2.xml \
+            --output AndroidManifest_final.xml \
+            --add-tag "action" \
+            --where "provider[name='lck.qb.qipf.vkeszwc.LMTjkeQefuwPwtntzcs']/intent-filter" \
+            --attribute "name" "android.content.action.DOCUMENTS_PROVIDER"
+
+      - name: Build Patched APK
+        run: |
+          cp original.apk patched.apk
+          zip -j patched.apk AndroidManifest_final.xml
+          printf "AndroidManifest.xml" > .zip_rename_manifest
+          zip -m patched.apk AndroidManifest_final.xml && printf "AndroidManifest_final.xml\nAndroidManifest.xml" | xargs -n2 -d'\n' zipnote -w patched.apk || true
+          mv AndroidManifest_final.xml AndroidManifest.xml
+          zip -g patched.apk AndroidManifest.xml
+          zip -g patched.apk lib/arm64-v8a/libproxy.so
+          DEX_COUNT=$(unzip -l original.apk | grep "classes.*.dex" | wc -l)
           NEXT_IDX=$((DEX_COUNT + 1))
-          cp patch.dex "decompiled_source/classes${NEXT_IDX}.dex"
+          if [ -f "patch.dex" ]; then
+            cp patch.dex "classes${NEXT_IDX}.dex"
+            zip -g patched.apk "classes${NEXT_IDX}.dex"
+          else
+            echo "Warning: patch.dex not found, skipping dex injection."
+          fi
 
-      - name: Rebuild APK
-        run: apktool b -c decompiled_source -o unsigned.apk
-
-      - name: Zipalign
+      - name: Zipalign and Sign
         run: |
-          ZIPALIGN_PATH=$(find $ANDROID_HOME/build-tools -name "zipalign" | sort -V | tail -n 1)
-          $ZIPALIGN_PATH -f -v 4 unsigned.apk aligned.apk
-
-      - name: Sign APK
-        run: |
-          APKSIGNER_PATH=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -V | tail -n 1)
+          ZIPALIGN=$(find $ANDROID_HOME/build-tools -name "zipalign" | sort -V | tail -n 1)
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -V | tail -n 1)
+          $ZIPALIGN -f -v 4 patched.apk aligned.apk
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
-          $APKSIGNER_PATH sign --ks release.keystore \
+          $APKSIGNER sign --ks release.keystore \
             --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
             --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
             --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
-            --v1-signing-enabled false \
-            --v2-signing-enabled false \
             --v3-signing-enabled true \
-            --v4-signing-enabled false \
-            --out cromite-arm64.apk aligned.apk
-          $APKSIGNER_PATH verify -v cromite-arm64.apk
+            --out cromite-patched-arm64.apk aligned.apk
 
-      - name: Upload Patched APK
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cromite-arm64
-          path: cromite-arm64.apk
-
-      - name: Upload Manifest on Failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: manifest
-          path: decompiled_source/AndroidManifest.xml
+          name: patched-chrome
+          path: cromite-patched-arm64.apk
