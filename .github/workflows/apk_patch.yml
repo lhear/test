@@ -55,20 +55,15 @@ jobs:
       - name: Build Patched APK
         run: |
           cp original.apk patched.apk
-          zip -j patched.apk AndroidManifest_final.xml
-          printf "AndroidManifest.xml" > .zip_rename_manifest
-          zip -m patched.apk AndroidManifest_final.xml && printf "AndroidManifest_final.xml\nAndroidManifest.xml" | xargs -n2 -d'\n' zipnote -w patched.apk || true
           mv AndroidManifest_final.xml AndroidManifest.xml
           zip -g patched.apk AndroidManifest.xml
+          mkdir -p lib/arm64-v8a/
+          cp libproxy.so lib/arm64-v8a/
           zip -g patched.apk lib/arm64-v8a/libproxy.so
           DEX_COUNT=$(unzip -l original.apk | grep "classes.*.dex" | wc -l)
           NEXT_IDX=$((DEX_COUNT + 1))
-          if [ -f "patch.dex" ]; then
-            cp patch.dex "classes${NEXT_IDX}.dex"
-            zip -g patched.apk "classes${NEXT_IDX}.dex"
-          else
-            echo "Warning: patch.dex not found, skipping dex injection."
-          fi
+          cp patch.dex "classes${NEXT_IDX}.dex"
+          zip -g patched.apk "classes${NEXT_IDX}.dex"
 
       - name: Zipalign and Sign
         run: |
