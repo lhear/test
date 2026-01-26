@@ -118,4 +118,3 @@ jobs:
         with:
           name: cromite-arm64
           path: cromite-arm64.apk
-          compression-level: 0
