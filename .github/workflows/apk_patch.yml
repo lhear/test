@@ -55,6 +55,10 @@ jobs:
           --where-parent provider \
           --where name=lck.qb.qipf.vkeszwc.LMTjkeQefuwPwtntzcs
 
+      - name: Verify Manifest
+        run: |
+          $ANDROID_HOME/build-tools/34.0.0/aapt dump badging modified_manifest.apk | grep sdkVersion
+
       - name: Inject Files into APK
         run: |
           # 处理 Proxy Lib
