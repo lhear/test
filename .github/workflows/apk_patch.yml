@@ -51,8 +51,8 @@ jobs:
 
       - name: Increment and Copy DEX
         run: |
-          EXISTING_MAX=$(ls decompiled_source/classes*.dex | grep -oP '\d+' | sort -rn | head -n 1 || echo 1)
-          NEXT_IDX=$((EXISTING_MAX + 1))
+          DEX_COUNT=$(find decompiled_source -maxdepth 1 -name "classes*.dex" | wc -l)
+          NEXT_IDX=$((DEX_COUNT + 1))
           cp patch.dex "decompiled_source/classes${NEXT_IDX}.dex"
 
       - name: Rebuild APK
