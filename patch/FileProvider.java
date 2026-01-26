@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.database.MatrixCursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
@@ -186,7 +187,15 @@ public class FileProvider extends DocumentsProvider {
 
         Bundle result = new Bundle();
         try {
-            Uri uri = extras.getParcelable("uri");
+            Uri uri;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                uri = extras.getParcelable("uri", Uri.class);
+            } else {
+                @SuppressWarnings("deprecation")
+                Uri tmp = extras.getParcelable("uri");
+                uri = tmp;
+            }
+            
             List<String> pathSegments = uri.getPathSegments();
             String documentId;
             if (pathSegments.size() >= 4) {
@@ -289,8 +298,12 @@ public class FileProvider extends DocumentsProvider {
     }
 
     public void d(MatrixCursor cursor, String documentId, File file) {
-        if (file == null) {
-            file = b(documentId, true);
+        try {
+            if (file == null) {
+                file = b(documentId, true);
+            }
+        } catch (FileNotFoundException e) {
+            file = null;
         }
 
         if (file == null) {
@@ -431,7 +444,13 @@ public class FileProvider extends DocumentsProvider {
         }
 
         MatrixCursor cursor = new MatrixCursor(projection != null ? projection : h);
-        File parent = b(parentDocumentId, true);
+        File parent;
+        try {
+            parent = b(parentDocumentId, true);
+        } catch (FileNotFoundException e) {
+            parent = null;
+        }
+        
         if (parent == null) {
             String dataId = parentDocumentId + "/data";
             d(cursor, dataId, c);
