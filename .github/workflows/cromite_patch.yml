@@ -35,8 +35,8 @@ jobs:
       - name: Apply Patch
         run: |
           patch decompiled_source/AndroidManifest.xml AndroidManifest.xml.patch
-          curl -L https://github.com/lhear/httproxy/releases/latest/download/httproxy-android-arm64.zip
-          unzip httproxy-android-arm64.zip -d proxy
+          curl -L https://github.com/lhear/httproxy/releases/latest/download/httproxy-android-arm64.zip -o proxy.zip
+          unzip proxy.zip -d proxy
           cp proxy/client decompiled_source/lib/arm64-v8a/libproxy.so
           cp classes2.dex decompiled_source/classes2.dex
 
