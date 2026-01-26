@@ -2,10 +2,6 @@ name: APK Patch and Build
 
 on:
   workflow_dispatch:
-    inputs:
-      apk_url:
-        description: 'APK Download URL'
-        required: true
 
 jobs:
   patch-apk:
