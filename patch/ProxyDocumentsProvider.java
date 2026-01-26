@@ -14,7 +14,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class ProxyDocumentsProvider extends DocumentsProvider {
-    private static final String[] ROOT_PROJECTION = {"root_id", "document_id", "title", "flags", "mime_types"};
+    private static final String[] ROOT_PROJECTION = {"root_id", "document_id", "title", "flags", "mime_types", "summary", "icon"};
     private static final String[] DOC_PROJECTION = {"document_id", "_display_name", "_size", "mime_type", "last_modified", "flags"};
     
     private String rootId;
