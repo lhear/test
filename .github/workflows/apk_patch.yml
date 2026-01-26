@@ -41,7 +41,7 @@ jobs:
           patch decompiled_source/AndroidManifest.xml AndroidManifest.xml.patch
 
       - name: Rebuild APK
-        run: apktool b -n decompiled_source -o unsigned.apk
+        run: apktool b decompiled_source -o unsigned.apk
 
       - name: Sign APK
         uses: r0adkll/sign-android-release@v1
