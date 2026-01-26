@@ -39,7 +39,7 @@ jobs:
 
       - name: Compile Java Class
         run: |
-          JAR_PATH="$ANDROID_HOME/platforms/android-36/android.jar"
+          JAR_PATH="$ANDROID_HOME/platforms/android-29/android.jar"
           mkdir -p out
           javac -Xlint:deprecation -cp "$JAR_PATH" \
           --release 8 \
@@ -50,7 +50,7 @@ jobs:
         run: |
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
           $BUILD_TOOLS_DIR/d8 --release \
-                              --lib "$ANDROID_SDK_ROOT/platforms/android-36/android.jar" \
+                              --lib "$ANDROID_SDK_ROOT/platforms/android-29/android.jar" \
                               --output ./ \
                               out/patch/FileProvider.class
 
