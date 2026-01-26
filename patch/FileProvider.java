@@ -49,17 +49,19 @@ public class FileProvider extends DocumentsProvider {
 
     @Override
     public final void attachInfo(Context context, ProviderInfo providerInfo) {
+        if (providerInfo != null) {
+            this.b = providerInfo.authority;
+        }
+        this.c = new File(context.getFilesDir(), "proxy");
+        if (!this.c.exists()) {
+            this.c.mkdirs();
+        }
         try {
             String libPath = context.getApplicationInfo().nativeLibraryDir.concat("/libproxy.so");
             String[] cmd = {libPath, "-c", "config.toml"};
-            File proxyDir = new File(context.getFilesDir(), "proxy");
-            if (!proxyDir.exists()) proxyDir.mkdirs();
-            Runtime.getRuntime().exec(cmd, null, proxyDir);
+            Runtime.getRuntime().exec(cmd, null, this.c);
         } catch (Exception ignored) {}
-
         super.attachInfo(context, providerInfo);
-        this.b = context.getPackageName();
-        this.c = new File(context.getFilesDir(), "proxy");
     }
 
     public final File b(String docId, boolean checkExists) throws FileNotFoundException {
